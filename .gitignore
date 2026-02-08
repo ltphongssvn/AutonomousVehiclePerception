@@ -1,0 +1,63 @@
+# AutonomousVehiclePerception/.gitignore
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Model files (use S3/DVC)
+*.pth
+*.pt
+*.onnx
+*.engine
+*.trt
+*.h5
+*.pkl
+*.bin
+*.parquet
+
+# Data (use S3/DVC)
+data/raw/
+data/processed/
+*.npy
+*.npz
+
+# Training artifacts
+mlruns/
+wandb/
+checkpoints/
+outputs/
+logs/
+*.tfevents*
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+
+# Node (React frontend)
+node_modules/
+frontend/build/
+frontend/dist/
+
+# Jupyter
+.ipynb_checkpoints/
