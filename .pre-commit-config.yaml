@@ -1,0 +1,53 @@
+# AutonomousVehiclePerception/.pre-commit-config.yaml
+repos:
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: .*\.lock|.*\.log|.*\.pyc
+
+  - repo: local
+    hooks:
+      - id: block-model-files
+        name: Block Large Model Files
+        entry: sh -c 'git diff --cached --name-only | grep -qE "\.(h5|pkl|pth|onnx|parquet|pt|engine|trt|bin)$" && echo "ERROR - Large model/data files detected. Remove with git rm --cached" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+
+      - id: check-data-bloat
+        name: Check Data Bloat
+        entry: sh -c 'git diff --cached --name-only | grep -qE "^(data/|mlruns/|wandb/|checkpoints/|outputs/|logs/)" && echo "WARNING - Files in data/mlruns/wandb/checkpoints directories detected" || true'
+        language: system
+        pass_filenames: false
+
+      - id: verify-selective-staging
+        name: Verify Selective Staging
+        entry: sh -c 'echo "Staged files:" && git diff --cached --name-only'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+        name: Fix Line Endings to LF
+      - id: end-of-file-fixer
+        name: Fix End of Files
+
+  - repo: local
+    hooks:
+      - id: black-format-check
+        name: Black Format Check (CI Mirror)
+        entry: black --check --line-length=127
+        language: system
+        types: [python]
+        pass_filenames: true
+      - id: flake8-critical
+        name: Flake8 Critical (CI Mirror)
+        entry: flake8 --select=E9,F63,F7,F82
+        language: system
+        types: [python]
+        pass_filenames: true
