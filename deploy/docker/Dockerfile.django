@@ -1,0 +1,29 @@
+# AutonomousVehiclePerception/deploy/docker/Dockerfile.django
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml .
+RUN pip install --no-cache-dir . 2>/dev/null || \
+    pip install --no-cache-dir \
+    Django>=5.0 \
+    djangorestframework>=3.14.0 \
+    django-cors-headers>=4.3.0 \
+    psycopg2-binary>=2.9.9 \
+    celery>=5.3.6 \
+    redis>=5.0.0 \
+    python-dotenv>=1.0.0 \
+    requests>=2.31.0
+
+COPY src/django_backend/ /app/
+
+EXPOSE 8000
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
