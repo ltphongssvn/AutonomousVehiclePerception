@@ -1,0 +1,109 @@
+{
+  "version": "1.0.0",
+  "services": {
+    "fastapi_model_service": {
+      "base_url": "http://localhost:8001",
+      "endpoints": {
+        "POST /predict/2d": {
+          "request": "multipart/form-data (file: image)",
+          "response": "PredictionResponse"
+        },
+        "POST /predict/3d": {
+          "request": "multipart/form-data (file: .bin/.npy)",
+          "response": "PredictionResponse"
+        },
+        "POST /predict/fpn": {
+          "request": "multipart/form-data (file: image)",
+          "response": "PredictionResponse"
+        },
+        "GET /health": {
+          "response": "HealthResponse"
+        },
+        "GET /model-info": {
+          "response": "ModelInfoResponse"
+        }
+      },
+      "schemas": {
+        "PredictionResponse": {
+          "model": "string",
+          "shape": "list[int]",
+          "predictions": "list[int]",
+          "inference_time_ms": "float",
+          "device": "string"
+        },
+        "HealthResponse": {
+          "status": "string",
+          "device": "string",
+          "models_loaded": "list[string]",
+          "gpu_available": "boolean"
+        },
+        "ModelInfoResponse": {
+          "name": "string",
+          "parameters": "integer",
+          "input_shape": "string",
+          "output_shape": "string"
+        }
+      }
+    },
+    "django_backend": {
+      "base_url": "http://localhost:8000",
+      "endpoints": {
+        "GET /api/": "API root",
+        "GET /api/fleet/vehicles/": "List vehicles",
+        "POST /api/fleet/vehicles/": "Create vehicle",
+        "GET /api/fleet/vehicles/{id}/": "Vehicle detail",
+        "GET /api/fleet/vehicles/summary/": "Fleet stats",
+        "GET /api/fleet/vehicles/{id}/sessions/": "Vehicle sessions",
+        "GET /api/fleet/sessions/": "List sessions",
+        "GET /api/fleet/sessions/{id}/frames/": "Session frames",
+        "GET /api/fleet/frames/": "List frames",
+        "GET /api/perception/models/": "List ML models",
+        "GET /api/perception/models/deployed/": "Deployed models",
+        "POST /api/perception/models/{id}/run_inference/": "Proxy to FastAPI",
+        "GET /api/perception/detections/": "List detections",
+        "GET /api/perception/detections/stats/": "Detection aggregates",
+        "GET /api/perception/objects/": "List detected objects"
+      },
+      "schemas": {
+        "Vehicle": {
+          "id": "integer",
+          "name": "string",
+          "vin": "string (unique)",
+          "status": "enum(active,maintenance,offline,testing)",
+          "num_cameras": "integer (default: 6)",
+          "has_lidar": "boolean (default: true)"
+        },
+        "DrivingSession": {
+          "id": "integer",
+          "vehicle": "integer (FK)",
+          "session_id": "string (unique)",
+          "start_time": "datetime",
+          "end_time": "datetime (nullable)",
+          "distance_km": "float",
+          "num_frames": "integer",
+          "weather": "string",
+          "processed": "boolean"
+        },
+        "MLModel": {
+          "id": "integer",
+          "name": "string",
+          "model_type": "enum(cnn_2d,cnn_3d,fpn_resnet)",
+          "version": "string",
+          "status": "enum(training,validating,deployed,archived)",
+          "accuracy": "float (nullable)",
+          "inference_time_ms": "float (nullable)"
+        },
+        "DetectedObject": {
+          "id": "integer",
+          "detection": "integer (FK)",
+          "object_class": "string",
+          "confidence": "float",
+          "bbox_x_min": "float",
+          "bbox_y_min": "float",
+          "bbox_x_max": "float",
+          "bbox_y_max": "float"
+        }
+      }
+    }
+  }
+}
