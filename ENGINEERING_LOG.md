@@ -191,3 +191,15 @@ omit =
 - Coverage config added to pyproject.toml with exclusions
 - CI updated with per-layer coverage gates: Model+Data ≥67%, FastAPI ≥80%
 - Installed in .venv: torch, torchvision, albumentations, fastapi, httpx, django, DRF
+
+### 2025-02-09: API Contract & Integration Tests
+- Added API contract documentation: `docs/api_contract.json` (single source of truth)
+- Integration tests: 10 passing (Django ↔ FastAPI schema alignment)
+- Full test suite: 67/67 passing, zero warnings
+- Test pyramid complete:
+  - `tests/unit/model/` — 13 tests (shape, gradient, FPN)
+  - `tests/unit/data/` — 22 tests (voxel, labels, augmentations)
+  - `tests/unit/fastapi/` — 7 tests (schemas, routes, preprocessing)
+  - `tests/unit/django/` — 15 tests (models, serializers, choices)
+  - `tests/integration/api/` — 10 tests (cross-service contracts)
+- CI updated with per-layer coverage gates
