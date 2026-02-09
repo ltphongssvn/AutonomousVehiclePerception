@@ -28,8 +28,7 @@ def get_train_transforms(image_size=(480, 640)):
             A.Resize(height=image_size[0], width=image_size[1]),
             # Geometric augmentations
             A.HorizontalFlip(p=0.5),
-            A.RandomRotate90(p=0.0),  # Disabled: cars don't appear rotated 90 degrees
-            A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.1, rotate_limit=10, p=0.5),
+            A.Affine(translate_percent=0.05, scale=(0.9, 1.1), rotate=(-10, 10), p=0.5),
             # Photometric augmentations (simulate lighting/weather variations)
             A.OneOf(
                 [
@@ -49,7 +48,7 @@ def get_train_transforms(image_size=(480, 640)):
                 p=0.3,
             ),
             # Simulate occlusion
-            A.CoarseDropout(max_holes=8, max_height=32, max_width=32, fill_value=0, p=0.2),
+            A.CoarseDropout(num_holes_range=(1, 8), hole_height_range=(8, 32), hole_width_range=(8, 32), p=0.2),
             # Normalize and convert to tensor
             A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
             ToTensorV2(),
