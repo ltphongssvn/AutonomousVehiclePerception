@@ -1,0 +1,118 @@
+# AutonomousVehiclePerception/docker-compose.yml
+version: "3.9"
+
+services:
+  # PostgreSQL database
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-av_perception}
+      POSTGRES_USER: ${DB_USER:-av_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-localdev123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-av_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (Celery broker + cache)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django backend
+  django:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.django
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-only-change-in-production}
+      - DJANGO_DEBUG=${DJANGO_DEBUG:-True}
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME:-av_perception}
+      - DB_USER=${DB_USER:-av_user}
+      - DB_PASSWORD=${DB_PASSWORD:-localdev123}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - MODEL_SERVICE_URL=http://fastapi:8001
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src/django_backend:/app
+
+  # Celery worker
+  celery:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.django
+    command: celery -A config worker -l info
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-dev-only-change-in-production}
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME:-av_perception}
+      - DB_USER=${DB_USER:-av_user}
+      - DB_PASSWORD=${DB_PASSWORD:-localdev123}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - MODEL_SERVICE_URL=http://fastapi:8001
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src/django_backend:/app
+
+  # FastAPI model service
+  fastapi:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.fastapi
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./src:/app/src
+      - ./weights:/app/weights
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # Gradio demo UI
+  gradio:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.fastapi
+    command: python -m src.fastapi_service.gradio_app
+    ports:
+      - "7860:7860"
+    depends_on:
+      - fastapi
+
+volumes:
+  postgres_data:
