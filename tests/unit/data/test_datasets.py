@@ -466,3 +466,166 @@ class TestKITTIDatasetGetitem:
         sample = ds[0]
         assert isinstance(sample, tuple)
         assert len(sample) >= 2
+
+
+class TestNuScenesSDKPath:
+    """Cover nuscenes_dataset.py SDK-based code paths via mocking."""
+
+    def test_init_with_mocked_nuscenes(self, tmp_path):
+        """Cover lines 78-83: successful nuScenes SDK init."""
+        import sys
+        from unittest.mock import MagicMock
+
+        # Create mock nuscenes module
+        mock_nuscenes_mod = MagicMock()
+        mock_nusc_instance = MagicMock()
+        mock_nusc_instance.scene = []
+        mock_nuscenes_mod.nuscenes.NuScenes.return_value = mock_nusc_instance
+
+        mock_splits_mod = MagicMock()
+        mock_splits_mod.splits.create_splits_scenes.return_value = {"train": [], "val": []}
+
+        sys.modules["nuscenes"] = mock_nuscenes_mod
+        sys.modules["nuscenes.nuscenes"] = mock_nuscenes_mod.nuscenes
+        sys.modules["nuscenes.utils"] = mock_splits_mod
+        sys.modules["nuscenes.utils.splits"] = mock_splits_mod.splits
+
+        try:
+            # Re-import to pick up mocked module
+            from importlib import reload
+            from src.data import nuscenes_dataset
+
+            reload(nuscenes_dataset)
+            ds = nuscenes_dataset.NuScenesDataset(root=str(tmp_path), version="v1.0-mini", split="train")
+            assert ds.nusc is not None
+            assert ds.samples == []
+        finally:
+            for mod_name in ["nuscenes", "nuscenes.nuscenes", "nuscenes.utils", "nuscenes.utils.splits"]:
+                sys.modules.pop(mod_name, None)
+
+    def test_get_split_samples_with_scenes(self, tmp_path):
+        """Cover lines 94-108: _get_split_samples iteration."""
+        import sys
+        from unittest.mock import MagicMock
+
+        mock_nuscenes_mod = MagicMock()
+        mock_nusc_instance = MagicMock()
+
+        sample1 = {"next": "token2", "data": {}}
+        sample2 = {"next": "", "data": {}}
+        mock_nusc_instance.get.side_effect = lambda table, token: sample1 if token == "token1" else sample2
+        mock_nusc_instance.scene = [{"name": "scene-0001", "first_sample_token": "token1"}]
+        mock_nuscenes_mod.nuscenes.NuScenes.return_value = mock_nusc_instance
+
+        mock_splits_mod = MagicMock()
+        mock_splits_mod.splits.create_splits_scenes.return_value = {"train": ["scene-0001"], "val": []}
+
+        sys.modules["nuscenes"] = mock_nuscenes_mod
+        sys.modules["nuscenes.nuscenes"] = mock_nuscenes_mod.nuscenes
+        sys.modules["nuscenes.utils"] = mock_splits_mod
+        sys.modules["nuscenes.utils.splits"] = mock_splits_mod.splits
+
+        try:
+            from importlib import reload
+            from src.data import nuscenes_dataset
+
+            reload(nuscenes_dataset)
+            ds = nuscenes_dataset.NuScenesDataset(root=str(tmp_path), version="v1.0-mini", split="train")
+            assert len(ds.samples) == 2
+        finally:
+            for mod_name in ["nuscenes", "nuscenes.nuscenes", "nuscenes.utils", "nuscenes.utils.splits"]:
+                sys.modules.pop(mod_name, None)
+
+    def test_getitem_sdk_single_camera(self, tmp_path):
+        """Cover lines 128-158: __getitem__ with SDK (single camera)."""
+        import sys
+        from unittest.mock import MagicMock
+
+        mock_nuscenes_mod = MagicMock()
+        mock_nusc_instance = MagicMock()
+
+        cam_dir = tmp_path / "samples" / "CAM_FRONT"
+        cam_dir.mkdir(parents=True)
+        from PIL import Image as PILImage
+
+        img = PILImage.fromarray(np.random.randint(0, 255, (900, 1600, 3), dtype=np.uint8))
+        img.save(cam_dir / "test.jpg")
+
+        mock_nusc_instance.scene = []
+        mock_nusc_instance.get.side_effect = lambda table, token: (
+            {
+                "data": {"CAM_FRONT": "cam_token"},
+                "anns": [],
+            }
+            if table == "sample"
+            else {"filename": f"samples/CAM_FRONT/test.jpg"}
+        )
+
+        mock_nuscenes_mod.nuscenes.NuScenes.return_value = mock_nusc_instance
+
+        mock_splits_mod = MagicMock()
+        mock_splits_mod.splits.create_splits_scenes.return_value = {"train": [], "val": []}
+
+        sys.modules["nuscenes"] = mock_nuscenes_mod
+        sys.modules["nuscenes.nuscenes"] = mock_nuscenes_mod.nuscenes
+        sys.modules["nuscenes.utils"] = mock_splits_mod
+        sys.modules["nuscenes.utils.splits"] = mock_splits_mod.splits
+
+        try:
+            from importlib import reload
+            from src.data import nuscenes_dataset
+
+            reload(nuscenes_dataset)
+            ds = nuscenes_dataset.NuScenesDataset(root=str(tmp_path), version="v1.0-mini")
+            ds.samples = ["fake_token"]
+            sample = ds[0]
+            assert isinstance(sample, tuple)
+        finally:
+            for mod_name in ["nuscenes", "nuscenes.nuscenes", "nuscenes.utils", "nuscenes.utils.splits"]:
+                sys.modules.pop(mod_name, None)
+
+    def test_getitem_sdk_multi_camera(self, tmp_path):
+        """Cover lines 128-145: __getitem__ multi-camera path."""
+        import sys
+        from unittest.mock import MagicMock
+        from src.data.nuscenes_dataset import CAMERA_NAMES
+        from PIL import Image as PILImage
+
+        mock_nuscenes_mod = MagicMock()
+        mock_nusc_instance = MagicMock()
+
+        for cam in CAMERA_NAMES:
+            cam_dir = tmp_path / "samples" / cam
+            cam_dir.mkdir(parents=True)
+            img = PILImage.fromarray(np.random.randint(0, 255, (900, 1600, 3), dtype=np.uint8))
+            img.save(cam_dir / "test.jpg")
+
+        sample_data = {"data": {cam: f"{cam}_token" for cam in CAMERA_NAMES}, "anns": []}
+        mock_nusc_instance.scene = []
+        mock_nusc_instance.get.side_effect = lambda table, token: (
+            sample_data if table == "sample" else {"filename": f"samples/{token.replace('_token', '')}/test.jpg"}
+        )
+
+        mock_nuscenes_mod.nuscenes.NuScenes.return_value = mock_nusc_instance
+
+        mock_splits_mod = MagicMock()
+        mock_splits_mod.splits.create_splits_scenes.return_value = {"train": [], "val": []}
+
+        sys.modules["nuscenes"] = mock_nuscenes_mod
+        sys.modules["nuscenes.nuscenes"] = mock_nuscenes_mod.nuscenes
+        sys.modules["nuscenes.utils"] = mock_splits_mod
+        sys.modules["nuscenes.utils.splits"] = mock_splits_mod.splits
+
+        try:
+            from importlib import reload
+            from src.data import nuscenes_dataset
+
+            reload(nuscenes_dataset)
+            ds = nuscenes_dataset.NuScenesDataset(root=str(tmp_path), version="v1.0-mini", camera="all")
+            ds.samples = ["fake_token"]
+            sample = ds[0]
+            assert isinstance(sample, tuple)
+            assert isinstance(sample[0], dict)
+        finally:
+            for mod_name in ["nuscenes", "nuscenes.nuscenes", "nuscenes.utils", "nuscenes.utils.splits"]:
+                sys.modules.pop(mod_name, None)

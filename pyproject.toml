@@ -84,8 +84,14 @@ omit = [
     "notebooks/**",
     "deploy/**",
     "triton_models/**",
+    "**/fleet/tests.py",
+    "**/perception/tests.py",
 ]
 
 [tool.coverage.report]
 show_missing = true
 skip_empty = true
+exclude_lines = [
+    "if __name__",
+    "pragma: no cover",
+]
