@@ -1,0 +1,32 @@
+# AutonomousVehiclePerception/triton_models/models/cnn_3d_voxel/config.pbtxt
+name: "cnn_3d_voxel"
+platform: "onnxruntime_onnx"
+max_batch_size: 4
+
+input [
+  {
+    name: "input"
+    data_type: TYPE_FP32
+    dims: [ 1, 20, 128, 128 ]
+  }
+]
+
+output [
+  {
+    name: "output"
+    data_type: TYPE_FP32
+    dims: [ 5, 32, 32 ]
+  }
+]
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_GPU
+  }
+]
+
+dynamic_batching {
+  preferred_batch_size: [ 2, 4 ]
+  max_queue_delay_microseconds: 100
+}
