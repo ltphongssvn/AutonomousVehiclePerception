@@ -100,7 +100,7 @@ def check_health():
 
 def build_gradio_app():
     """Build and return the Gradio Blocks app."""
-    with gr.Blocks(title="AV Perception Demo", theme=gr.themes.Soft()) as demo:
+    with gr.Blocks(title="AV Perception Demo") as demo:
         gr.Markdown("# 🚗 Autonomous Vehicle Perception Demo")
         gr.Markdown("Upload a camera image to run object detection using CNN models trained on KITTI/nuScenes data.")
 
@@ -135,4 +135,4 @@ def build_gradio_app():
 
 if __name__ == "__main__":
     demo = build_gradio_app()
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(server_name="0.0.0.0", server_port=7860, theme=gr.themes.Soft())
