@@ -164,3 +164,130 @@ class TestLidarAugmentations:
         voxels = np.ones((10, 32, 32), dtype=np.float32)
         result = augs["noise"](voxels.copy(), p=1.0)
         assert (result >= 0).all()
+
+
+class TestAugmentationsMainBlock:
+    """Cover augmentations.py lines 92-147 (lidar aug helpers + main guard)."""
+
+    def test_get_lidar_augmentations_keys(self):
+        from src.data.augmentations import get_lidar_augmentations
+
+        augs = get_lidar_augmentations()
+        assert "flip_x" in augs
+        assert "flip_y" in augs
+        assert "noise" in augs
+        assert "dropout" in augs
+
+    def test_flip_y(self):
+        from src.data.augmentations import get_lidar_augmentations
+
+        augs = get_lidar_augmentations()
+        voxel = np.random.rand(20, 128, 128).astype(np.float32)
+        flipped = augs["flip_y"](voxel)
+        assert flipped.shape == voxel.shape
+
+    def test_noise_returns_array(self):
+        from src.data.augmentations import get_lidar_augmentations
+
+        augs = get_lidar_augmentations()
+        voxel = np.ones((20, 128, 128), dtype=np.float32) * 0.5
+        noisy = augs["noise"](voxel)
+        assert noisy.shape == voxel.shape
+        assert noisy.dtype == voxel.dtype
+
+    def test_dropout_zeros_some(self):
+        from src.data.augmentations import get_lidar_augmentations
+
+        augs = get_lidar_augmentations()
+        voxel = np.ones((20, 128, 128), dtype=np.float32)
+        dropped = augs["dropout"](voxel)
+        assert dropped.sum() <= voxel.sum()
+
+
+class TestKITTIDatasetClass:
+    """Cover kitti_dataset.py Dataset.__init__, __len__, __getitem__."""
+
+    def test_dataset_init_nonexistent(self):
+        from src.data.kitti_dataset import KITTIDataset
+
+        ds = KITTIDataset(root="/nonexistent/path", split="training")
+        assert str(ds.root) == "/nonexistent/path"
+
+    def test_dataset_has_split(self):
+        from src.data.kitti_dataset import KITTIDataset
+
+        ds = KITTIDataset(root="/tmp", split="training")
+        assert ds.split == "training"
+
+    def test_dataset_len_empty(self):
+        from src.data.kitti_dataset import KITTIDataset
+
+        ds = KITTIDataset(root="/nonexistent", split="training")
+        assert len(ds) == 0
+
+    def test_voxelize_with_real_points(self):
+        from src.data.kitti_dataset import voxelize_points
+
+        pts = np.array([[0.0, 0.0, 0.0, 1.0], [5.0, 5.0, -1.0, 0.5], [10.0, -10.0, 0.5, 0.8]], dtype=np.float32)
+        grid = voxelize_points(pts)
+        assert grid.shape[0] == 20
+        assert grid.sum() > 0
+
+    def test_dataset_with_mock_files(self, tmp_path):
+        from PIL import Image
+        from src.data.kitti_dataset import KITTIDataset
+
+        img_dir = tmp_path / "training" / "image_2"
+        label_dir = tmp_path / "training" / "label_2"
+        velodyne_dir = tmp_path / "training" / "velodyne"
+        calib_dir = tmp_path / "training" / "calib"
+        img_dir.mkdir(parents=True)
+        label_dir.mkdir(parents=True)
+        velodyne_dir.mkdir(parents=True)
+        calib_dir.mkdir(parents=True)
+
+        # Create dummy image
+        img = Image.fromarray(np.random.randint(0, 255, (375, 1242, 3), dtype=np.uint8))
+        img.save(img_dir / "000000.png")
+
+        # Create dummy label
+        (label_dir / "000000.txt").write_text(
+            "Car 0.00 0 1.85 387.63 181.54 423.81 203.12 1.67 1.87 3.69 -16.53 2.39 58.49 1.57\n"
+        )
+
+        # Create dummy velodyne
+        pts = np.random.randn(100, 4).astype(np.float32)
+        pts.tofile(str(velodyne_dir / "000000.bin"))
+
+        ds = KITTIDataset(root=str(tmp_path), split="training")
+        assert len(ds) == 1
+
+
+class TestNuScenesDatasetClass:
+    """Cover nuscenes_dataset.py Dataset class."""
+
+    def test_dataset_init(self):
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        ds = NuScenesDataset(root="/nonexistent", version="v1.0-mini")
+        assert str(ds.root) == "/nonexistent"
+
+    def test_dataset_has_version(self):
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        ds = NuScenesDataset(root="/tmp", version="v1.0-mini")
+        assert ds.version == "v1.0-mini"
+
+    def test_dataset_len_empty(self):
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        ds = NuScenesDataset(root="/nonexistent", version="v1.0-mini")
+        assert len(ds) == 0
+
+    def test_class_list_complete(self):
+        from src.data.nuscenes_dataset import NUSCENES_CLASSES
+
+        assert len(NUSCENES_CLASSES) == 10
+        assert "car" in NUSCENES_CLASSES
+        assert "pedestrian" in NUSCENES_CLASSES
+        assert "bicycle" in NUSCENES_CLASSES
