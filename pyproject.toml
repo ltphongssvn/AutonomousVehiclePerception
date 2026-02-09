@@ -69,3 +69,23 @@ select = ["E9", "F63", "F7", "F82"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "**/migrations/**",
+    "manage.py",
+    "**/asgi.py",
+    "**/wsgi.py",
+    "**/settings/**",
+    "config/**",
+    "**/__init__.py",
+    "tests/**",
+    "notebooks/**",
+    "deploy/**",
+    "triton_models/**",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
