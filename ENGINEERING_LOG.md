@@ -179,3 +179,15 @@ omit =
 - RED → GREEN → REFACTOR on every feature
 - No PR merges below coverage threshold
 - Coverage measured per-package, not combined
+
+### 2025-02-09: TDD Implementation
+- Restructured tests into pyramid: `tests/unit/{model,data,fastapi,django}`, `tests/integration/`, `tests/e2e/`
+- Unit tests: 57/57 passing, zero warnings (`python -m pytest tests/unit/ -v -W error`)
+  - Model layer: 13 tests (shape contracts, gradient flow, FPN levels)
+  - Data pipeline: 22 tests (voxelization, label parsing, augmentations, bbox validity)
+  - FastAPI service: 7 tests (response schemas, preprocessing, route registry)
+  - Django backend: 15 tests (model defaults, serializer fields/types, choices)
+- Fixed albumentations v2 API: `ShiftScaleRotate` → `Affine`, `CoarseDropout` params updated
+- Coverage config added to pyproject.toml with exclusions
+- CI updated with per-layer coverage gates: Model+Data ≥67%, FastAPI ≥80%
+- Installed in .venv: torch, torchvision, albumentations, fastapi, httpx, django, DRF
