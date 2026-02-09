@@ -108,3 +108,33 @@ class TestBuildApp:
 
     def test_api_url_configured(self):
         assert API_URL == "http://localhost:8001"
+
+
+class TestConnectionErrors:
+    @patch("src.fastapi_service.gradio_app.requests.post", side_effect=__import__("requests").ConnectionError("refused"))
+    def test_predict_connection_error(self, mock_post):
+        img = np.random.randint(0, 255, (480, 640, 3), dtype=np.uint8)
+        result_img, result_text = predict_image(img, "2D CNN")
+        assert "Cannot connect" in result_text
+
+    @patch("src.fastapi_service.gradio_app.requests.get", side_effect=__import__("requests").ConnectionError("refused"))
+    def test_health_connection_error(self, mock_get):
+        result = check_health()
+        assert "Cannot connect" in result
+
+
+class TestBuildAppInternals:
+    def test_build_function_signature(self):
+        import inspect
+
+        sig = inspect.signature(build_gradio_app)
+        assert len(sig.parameters) == 0
+
+    def test_build_function_source_has_blocks(self):
+        import inspect
+
+        source = inspect.getsource(build_gradio_app)
+        assert "gr.Blocks" in source
+        assert "gr.Image" in source
+        assert "gr.Button" in source
+        assert "predict_btn" in source
