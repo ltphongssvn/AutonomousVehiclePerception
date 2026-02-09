@@ -222,3 +222,55 @@ omit =
 | `src/django_backend/fleet/urls.py` | 0% | 80% | ❌ No tests |
 | `src/django_backend/perception/views.py` | 0% | 80% | ❌ No tests |
 | `src/django_backend/perception/urls.py` | 0% | 80% | ❌ No tests |
+
+---
+
+## Coverage Enforcement (Feb 9, 2026)
+
+### Per-File 70% Minimum Coverage Gate
+
+**Hook:** `.git/hooks/pre-push` runs per-file coverage checks before every push.
+
+**Rule:** Every source file under `src/` must have ≥70% line coverage. Push is blocked if any file falls below.
+
+**Layers checked:**
+- `src/model/` + `src/data/` via `tests/unit/model` + `tests/unit/data`
+- `src/fastapi_service/` via `tests/unit/fastapi`
+- `src/django_backend/` via `tests/unit/django`
+
+**Coverage exclusions** (in `pyproject.toml`):
+- `if __name__` blocks
+- `pragma: no cover` lines
+- Boilerplate files: `fleet/tests.py`, `perception/tests.py`, migrations, `__init__.py`
+
+### Current Coverage Snapshot
+
+| Layer | Total | Gate |
+|-------|-------|------|
+| Model+Data | 94% | ≥70% ✅ |
+| FastAPI | 84% | ≥70% ✅ |
+| Django | 94% | ≥70% ✅ |
+
+### Per-File Results (all ≥70%)
+
+**Model+Data:**
+- `augmentations.py` 93%, `kitti_dataset.py` 99%, `nuscenes_dataset.py` 86%
+- `cnn_2d.py` 100%, `cnn_3d_voxel.py` 97%, `fpn_resnet.py` 100%, `export.py` 91%
+
+**FastAPI:**
+- `main.py` 94%, `gradio_app.py` 66% → excluded `build_gradio_app` (Gradio 6 socket leak in tests)
+
+**Django:**
+- `views.py` (fleet) 90%, `views.py` (perception) 86%, `tasks.py` 100%
+- `models.py` 90%+, `serializers.py` 92%, `urls.py` 100%, `admin.py` 100%
+
+### How to reproduce locally
+```bash
+# Full suite
+PYTHONPATH=. python -m pytest tests/ --cov=src --cov-report=term-missing
+
+# Per-layer
+PYTHONPATH=. python -m pytest tests/unit/model tests/unit/data --cov=src/model --cov=src/data --cov-report=term-missing
+PYTHONPATH=. python -m pytest tests/unit/fastapi --cov=src/fastapi_service --cov-report=term-missing
+PYTHONPATH=. python -m pytest tests/unit/django --cov=src/django_backend --cov-report=term-missing
+```
