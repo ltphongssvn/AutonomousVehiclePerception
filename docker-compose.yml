@@ -116,3 +116,30 @@ services:
 
 volumes:
   postgres_data:
+
+  # Prometheus monitoring
+  prometheus:
+    image: prom/prometheus:v2.49.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/docker/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - django
+      - fastapi
+
+  # Grafana dashboards
+  grafana:
+    image: grafana/grafana:10.3.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./deploy/docker/grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  grafana_data:
