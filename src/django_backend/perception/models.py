@@ -76,7 +76,7 @@ class DetectedObject(models.Model):
         ("other", "Other"),
     ]
 
-    detection = models.ForeignKey(DetectionResult, on_delete=models.CASCADE, related_name="objects")
+    detection = models.ForeignKey(DetectionResult, on_delete=models.CASCADE, related_name="detected_objects")
     object_class = models.CharField(max_length=20, choices=OBJECT_CLASSES)
     confidence = models.FloatField(help_text="Detection confidence 0-1")
     # 2D bounding box (pixel coordinates)
