@@ -64,3 +64,4 @@ frontend/dist/
 # Jupyter
 .ipynb_checkpoints/
 src/django_backend/db.sqlite3
+.coverage
