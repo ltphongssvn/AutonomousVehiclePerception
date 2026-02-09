@@ -137,3 +137,58 @@ class TestDetectionResultViewSetActions:
         view = DetectionResultViewSet.as_view({"get": "stats"})
         response = view(request)
         assert response.status_code in (200, 401, 403)
+
+
+class TestFleetViewSetActions:
+    @patch("fleet.views.VehicleViewSet.get_object")
+    def test_sessions_action(self, mock_get_obj):
+        mock_vehicle = MagicMock()
+        mock_vehicle.sessions.all.return_value = []
+        mock_get_obj.return_value = mock_vehicle
+
+        from rest_framework.test import APIRequestFactory
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/fleet/vehicles/1/sessions/")
+        request.user = MagicMock(is_authenticated=True)
+        view = VehicleViewSet.as_view({"get": "sessions"})
+        response = view(request, pk=1)
+        assert response.status_code == 200
+
+    @patch("fleet.views.DrivingSessionViewSet.get_object")
+    @patch("fleet.views.DrivingSessionViewSet.paginate_queryset")
+    def test_frames_action(self, mock_paginate, mock_get_obj):
+        mock_session = MagicMock()
+        mock_session.frames.all.return_value = []
+        mock_get_obj.return_value = mock_session
+        mock_paginate.return_value = None
+
+        from rest_framework.test import APIRequestFactory
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/fleet/sessions/1/frames/")
+        request.user = MagicMock(is_authenticated=True)
+        view = DrivingSessionViewSet.as_view({"get": "frames"})
+        response = view(request, pk=1)
+        assert response.status_code == 200
+
+    @patch("fleet.views.DrivingSessionViewSet.get_object")
+    @patch("fleet.views.DrivingSessionViewSet.paginate_queryset")
+    @patch("fleet.views.DrivingSessionViewSet.get_paginated_response")
+    def test_frames_action_paginated(self, mock_pag_resp, mock_paginate, mock_get_obj):
+        mock_session = MagicMock()
+        mock_session.frames.all.return_value = []
+        mock_get_obj.return_value = mock_session
+        mock_paginate.return_value = []
+        from rest_framework.response import Response as DRFResponse
+
+        mock_pag_resp.return_value = DRFResponse([])
+
+        from rest_framework.test import APIRequestFactory
+
+        factory = APIRequestFactory()
+        request = factory.get("/api/fleet/sessions/1/frames/")
+        request.user = MagicMock(is_authenticated=True)
+        view = DrivingSessionViewSet.as_view({"get": "frames"})
+        response = view(request, pk=1)
+        assert response.status_code == 200
