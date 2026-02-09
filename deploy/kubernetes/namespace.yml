@@ -1,0 +1,7 @@
+# AutonomousVehiclePerception/deploy/kubernetes/namespace.yml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: av-perception
+  labels:
+    app: av-perception
