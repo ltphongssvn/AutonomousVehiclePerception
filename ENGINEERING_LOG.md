@@ -122,3 +122,60 @@ tests/
 - Prometheus scrape configs for Django, FastAPI, Triton
 - Grafana datasource provisioning
 - TensorBoard for training metrics (in notebooks)
+
+---
+
+## Test Coverage Standards
+
+### Coverage Gates (CPU-only PR CI)
+
+| Layer | Target | Scope |
+|---|---|---|
+| **FastAPI Service** | ≥ 80% line, ≥ 60% branch | `src/fastapi_service/` |
+| **Django Backend** | ≥ 80% line, ≥ 60% branch | `src/django_backend/` |
+| **Model + Data** | ≥ 67% line | `src/model/`, `src/data/` |
+| **Frontend (React)** | ≥ 60% line | `src/frontend/src/` |
+
+### CI Commands
+```bash
+# FastAPI gate
+python -m pytest tests/unit/fastapi --cov=src/fastapi_service --cov-branch --cov-fail-under=80
+
+# Django gate
+python -m pytest tests/unit/django --cov=src/django_backend --cov-branch --cov-fail-under=80
+
+# Model + Data gate (CPU contract tests)
+python -m pytest tests/unit/model tests/unit/data --cov=src/model --cov=src/data --cov-fail-under=67
+
+# Full unit test suite
+python -m pytest tests/unit/ -v --tb=short -W error
+```
+
+### Coverage Exclusions
+```ini
+# pyproject.toml [tool.coverage.run]
+omit =
+    **/migrations/**
+    manage.py
+    **/asgi.py
+    **/wsgi.py
+    **/settings/**
+    config/**
+    __init__.py
+    tests/**
+    notebooks/**
+    deploy/**
+    triton_models/**
+```
+
+### Nightly CI (GPU)
+- Triton load + inference smoke test
+- TensorRT build/compat checks
+- ONNX export + OnnxRuntime validation
+- Performance regression (latency/throughput)
+
+### Rules
+- All new code must include corresponding tests before merge
+- RED → GREEN → REFACTOR on every feature
+- No PR merges below coverage threshold
+- Coverage measured per-package, not combined
