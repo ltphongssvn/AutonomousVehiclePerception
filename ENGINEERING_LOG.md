@@ -203,3 +203,22 @@ omit =
   - `tests/unit/django/` — 15 tests (models, serializers, choices)
   - `tests/integration/api/` — 10 tests (cross-service contracts)
 - CI updated with per-layer coverage gates
+
+### 2025-02-09: Coverage Audit
+
+| File | Coverage | Target | Gap |
+|---|---|---|---|
+| `src/model/export.py` | 0% | 67% | ❌ No tests |
+| `src/model/cnn_2d.py` | 88% | 67% | ✅ |
+| `src/model/cnn_3d_voxel.py` | 83% | 67% | ✅ |
+| `src/model/fpn_resnet.py` | 85% | 67% | ✅ |
+| `src/data/augmentations.py` | 50% | 67% | ❌ Need __main__ + lidar tests |
+| `src/data/kitti_dataset.py` | 48% | 67% | ❌ Need Dataset class tests |
+| `src/data/nuscenes_dataset.py` | 17% | 67% | ❌ Need Dataset class tests |
+| `src/fastapi_service/main.py` | 38% | 80% | ❌ Need endpoint tests with TestClient |
+| `src/fastapi_service/gradio_app.py` | 0% | 80% | ❌ No tests |
+| `src/django_backend/fleet/views.py` | 0% | 80% | ❌ No tests |
+| `src/django_backend/fleet/tasks.py` | 0% | 80% | ❌ No tests |
+| `src/django_backend/fleet/urls.py` | 0% | 80% | ❌ No tests |
+| `src/django_backend/perception/views.py` | 0% | 80% | ❌ No tests |
+| `src/django_backend/perception/urls.py` | 0% | 80% | ❌ No tests |
