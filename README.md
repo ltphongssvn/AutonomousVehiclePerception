@@ -137,7 +137,7 @@ AutonomousVehiclePerception/
 │   └── frontend/               # React + Three.js frontend
 │       ├── package.json
 │       └── src/
-├── triton/                     # Triton model repository
+├── triton_models/                     # Triton model repository
 │   └── models/
 ├── deploy/
 │   ├── docker/
