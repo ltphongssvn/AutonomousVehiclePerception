@@ -1,0 +1,80 @@
+# AutonomousVehiclePerception/deploy/kubernetes/triton-deployment.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: triton-server
+  namespace: av-perception
+  labels:
+    app: triton-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: triton-server
+  template:
+    metadata:
+      labels:
+        app: triton-server
+    spec:
+      containers:
+        - name: triton
+          image: nvcr.io/nvidia/tritonserver:24.01-py3
+          args:
+            - tritonserver
+            - --model-repository=/models
+            - --strict-model-config=true
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 8001
+              name: grpc
+            - containerPort: 8002
+              name: metrics
+          volumeMounts:
+            - name: model-repo
+              mountPath: /models
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "4Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "4000m"
+              memory: "8Gi"
+              nvidia.com/gpu: "1"
+          readinessProbe:
+            httpGet:
+              path: /v2/health/ready
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v2/health/live
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: model-repo
+          persistentVolumeClaim:
+            claimName: triton-models-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: triton-server
+  namespace: av-perception
+spec:
+  selector:
+    app: triton-server
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+    - port: 8001
+      targetPort: 8001
+      name: grpc
+    - port: 8002
+      targetPort: 8002
+      name: metrics
+  type: ClusterIP
