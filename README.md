@@ -1,4 +1,4 @@
-# AutonomousVehiclePerception/README.md
+AutonomousVehiclePerception/README.md
 # Autonomous Vehicle Perception — CNN Pipeline
 
 Real-time object detection and segmentation from multi-camera feeds for self-driving vehicles, built with PyTorch, Django, FastAPI, and NVIDIA Triton.
@@ -17,29 +17,29 @@ Autonomous vehicles require real-time perception systems that detect and classif
 
 ## Architecture
 ```
-┌─────────────────────────────────────────────────────────┐
+┌───────────────────────────────────────────────────────────┐
 │                    Frontend (React)                       │
 │         Three.js (3D point cloud visualization)           │
-└──────────────────────┬──────────────────────────────────┘
+└──────────────────────┬────────────────────────────────────┘
                        │
-┌──────────────────────▼──────────────────────────────────┐
-│              Django Backend (Port 8000)                    │
+┌──────────────────────▼────────────────────────────────────┐
+│              Django Backend (Port 8000)                   │
 │   Fleet management, RBAC, audit logs, admin dashboards    │
 │   Django REST Framework API                               │
 │   Celery + Redis (async batch processing)                 │
 │   PostgreSQL + TimescaleDB + MinIO/S3                     │
-└──────────────────────┬──────────────────────────────────┘
+└──────────────────────┬────────────────────────────────────┘
                        │ REST/gRPC
-┌──────────────────────▼──────────────────────────────────┐
+┌──────────────────────▼─────────────────────────────────────┐
 │           FastAPI Model Service (Port 8001)                │
 │   Preprocessing + PyTorch CNN inference + Postprocessing   │
-│   Gradio demo UI (Port 7860)                              │
-└──────────────────────┬──────────────────────────────────┘
+│   Gradio demo UI (Port 7860)                               │
+└──────────────────────┬─────────────────────────────────────┘
                        │
-┌──────────────────────▼──────────────────────────────────┐
-│        NVIDIA Triton Inference Server (Port 8002)         │
-│   TensorRT-optimized models, batched GPU inference        │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────▼─────────────────────────────────────┐
+│        NVIDIA Triton Inference Server (Port 8002)          │
+│   TensorRT-optimized models, batched GPU inference         │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ## Tech Stack
