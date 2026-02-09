@@ -291,3 +291,178 @@ class TestNuScenesDatasetClass:
         assert "car" in NUSCENES_CLASSES
         assert "pedestrian" in NUSCENES_CLASSES
         assert "bicycle" in NUSCENES_CLASSES
+
+
+# Append to tests/unit/data/test_datasets.py
+
+
+class TestNuScenesDatasetMock:
+    """Cover nuscenes_dataset.py Dataset __getitem__, transforms, lidar loading."""
+
+    def test_dataset_camera_default(self):
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        ds = NuScenesDataset(root="/tmp", version="v1.0-mini")
+        assert ds.camera == "CAM_FRONT"
+
+    def test_dataset_custom_camera(self):
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        ds = NuScenesDataset(root="/tmp", version="v1.0-mini", camera="CAM_BACK")
+        assert ds.camera == "CAM_BACK"
+
+    def test_dataset_load_lidar_default(self):
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        ds = NuScenesDataset(root="/tmp", version="v1.0-mini")
+        assert ds.load_lidar is False
+
+    def test_dataset_load_lidar_true(self):
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        ds = NuScenesDataset(root="/tmp", version="v1.0-mini", load_lidar=True)
+        assert ds.load_lidar is True
+
+    def test_dataset_split(self):
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        ds = NuScenesDataset(root="/tmp", version="v1.0-mini", split="val")
+        assert ds.split == "val"
+
+    def test_dataset_with_mock_samples(self, tmp_path):
+        from PIL import Image as PILImage
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        cam_dir = tmp_path / "samples" / "CAM_FRONT"
+        cam_dir.mkdir(parents=True)
+        lidar_dir = tmp_path / "samples" / "LIDAR_TOP"
+        lidar_dir.mkdir(parents=True)
+
+        img = PILImage.fromarray(np.random.randint(0, 255, (900, 1600, 3), dtype=np.uint8))
+        img.save(cam_dir / "sample_0001.jpg")
+
+        ds = NuScenesDataset(root=str(tmp_path), version="v1.0-mini")
+        assert len(ds) == 1
+
+    def test_dataset_getitem_with_mock(self, tmp_path):
+        from PIL import Image as PILImage
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        cam_dir = tmp_path / "samples" / "CAM_FRONT"
+        cam_dir.mkdir(parents=True)
+
+        img = PILImage.fromarray(np.random.randint(0, 255, (900, 1600, 3), dtype=np.uint8))
+        img.save(cam_dir / "sample_0001.jpg")
+
+        ds = NuScenesDataset(root=str(tmp_path), version="v1.0-mini")
+        sample = ds[0]
+        assert isinstance(sample, tuple)
+        assert len(sample) == 2
+
+    def test_dataset_getitem_with_transform(self, tmp_path):
+        from PIL import Image as PILImage
+        from src.data.nuscenes_dataset import NuScenesDataset
+        import albumentations as A
+        from albumentations.pytorch import ToTensorV2
+
+        cam_dir = tmp_path / "samples" / "CAM_FRONT"
+        cam_dir.mkdir(parents=True)
+
+        img = PILImage.fromarray(np.random.randint(0, 255, (900, 1600, 3), dtype=np.uint8))
+        img.save(cam_dir / "sample_0001.jpg")
+
+        tf = A.Compose([A.Resize(480, 640), ToTensorV2()])
+        ds = NuScenesDataset(root=str(tmp_path), version="v1.0-mini", transform=tf)
+        sample = ds[0]
+        assert isinstance(sample, tuple)
+
+    def test_dataset_with_lidar(self, tmp_path):
+        from PIL import Image as PILImage
+        from src.data.nuscenes_dataset import NuScenesDataset
+
+        cam_dir = tmp_path / "samples" / "CAM_FRONT"
+        cam_dir.mkdir(parents=True)
+        lidar_dir = tmp_path / "samples" / "LIDAR_TOP"
+        lidar_dir.mkdir(parents=True)
+
+        img = PILImage.fromarray(np.random.randint(0, 255, (900, 1600, 3), dtype=np.uint8))
+        img.save(cam_dir / "sample_0001.jpg")
+
+        pts = np.random.randn(1000, 5).astype(np.float32)
+        pts.tofile(str(lidar_dir / "sample_0001.bin"))
+
+        ds = NuScenesDataset(root=str(tmp_path), version="v1.0-mini", load_lidar=True)
+        sample = ds[0]
+        assert isinstance(sample, tuple)
+
+
+class TestKITTIDatasetGetitem:
+    """Cover kitti_dataset.py __getitem__ and transform paths."""
+
+    def test_getitem_returns_sample(self, tmp_path):
+        from PIL import Image as PILImage
+        from src.data.kitti_dataset import KITTIDataset
+
+        img_dir = tmp_path / "training" / "image_2"
+        label_dir = tmp_path / "training" / "label_2"
+        velodyne_dir = tmp_path / "training" / "velodyne"
+        for d in [img_dir, label_dir, velodyne_dir]:
+            d.mkdir(parents=True)
+
+        img = PILImage.fromarray(np.random.randint(0, 255, (375, 1242, 3), dtype=np.uint8))
+        img.save(img_dir / "000000.png")
+        (label_dir / "000000.txt").write_text(
+            "Car 0.00 0 1.85 387.63 181.54 423.81 203.12 1.67 1.87 3.69 -16.53 2.39 58.49 1.57\n"
+        )
+        pts = np.random.randn(100, 4).astype(np.float32)
+        pts.tofile(str(velodyne_dir / "000000.bin"))
+
+        ds = KITTIDataset(root=str(tmp_path), split="training")
+        sample = ds[0]
+        assert isinstance(sample, tuple)
+        assert "annotations" in sample[1]
+
+    def test_getitem_with_transform(self, tmp_path):
+        from PIL import Image as PILImage
+        from src.data.kitti_dataset import KITTIDataset
+        from src.data.augmentations import get_val_transforms
+
+        img_dir = tmp_path / "training" / "image_2"
+        label_dir = tmp_path / "training" / "label_2"
+        for d in [img_dir, label_dir]:
+            d.mkdir(parents=True)
+
+        img = PILImage.fromarray(np.random.randint(0, 255, (375, 1242, 3), dtype=np.uint8))
+        img.save(img_dir / "000000.png")
+        (label_dir / "000000.txt").write_text(
+            "Car 0.00 0 1.85 387.63 181.54 423.81 203.12 1.67 1.87 3.69 -16.53 2.39 58.49 1.57\n"
+        )
+
+        tf = get_val_transforms(image_size=(480, 640))
+        ds = KITTIDataset(root=str(tmp_path), split="training", transform=tf)
+        sample = ds[0]
+        assert isinstance(sample, tuple)
+
+    def test_getitem_with_lidar(self, tmp_path):
+        from PIL import Image as PILImage
+        from src.data.kitti_dataset import KITTIDataset
+
+        img_dir = tmp_path / "training" / "image_2"
+        label_dir = tmp_path / "training" / "label_2"
+        velodyne_dir = tmp_path / "training" / "velodyne"
+        for d in [img_dir, label_dir, velodyne_dir]:
+            d.mkdir(parents=True)
+
+        img = PILImage.fromarray(np.random.randint(0, 255, (375, 1242, 3), dtype=np.uint8))
+        img.save(img_dir / "000000.png")
+        (label_dir / "000000.txt").write_text(
+            "Car 0.00 0 1.85 387.63 181.54 423.81 203.12 1.67 1.87 3.69 -16.53 2.39 58.49 1.57\n"
+        )
+        pts = np.random.randn(500, 4).astype(np.float32)
+        pts[:, :3] *= 20
+        pts.tofile(str(velodyne_dir / "000000.bin"))
+
+        ds = KITTIDataset(root=str(tmp_path), split="training", load_lidar=True)
+        sample = ds[0]
+        assert isinstance(sample, tuple)
+        assert len(sample) >= 2
